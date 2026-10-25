@@ -1,7 +1,19 @@
 # npm publishing
 
 The `publish.yml` workflow publishes from the `release` branch with npm trusted publishing.
-It uses a GitHub-hosted runner, Node 24, and npm 11.5.1 or later.
+CI and publication use GitHub-hosted runners with Node 26.12.1 and npm 12.2.1.
+These are the latest releases verified on 2026-10-25.
+The package keeps its consumer support floor at Node `>=22`.
+After setup-node selects Node 26.12.1, both workflows run:
+
+```sh
+test "$(node --version)" = 'v26.12.1'
+npm install --global npm@12.2.1 --ignore-scripts --registry=https://registry.npmjs.org
+test "$(npm --version)" = '12.2.1'
+```
+
+A failed installation or version check stops the job before dependency installation.
+The publication guard checks both exact versions again before any registry lookup.
 Only the publish job receives `id-token: write`. The workflow passes no npm token.
 
 Before enabling this workflow, configure the package's trusted publisher on npm:
@@ -28,3 +40,6 @@ A failed publication fails the job. A rerun checks the registry again before pub
 Sources: [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),
 [GitHub concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
 and [GitHub OIDC](https://docs.github.com/en/actions/concepts/security/openid-connect).
+
+Runtime sources: [Node release feed](https://nodejs.org/dist/index.json) and
+[npm latest metadata](https://registry.npmjs.org/npm/latest).
