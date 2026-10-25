@@ -7,20 +7,61 @@ permissions:
   contents: read
 jobs:
   publish:
+    if: github.repository == 'pooriaarab/agentic-security' && github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: npm-agentic-security-publish
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '24'
-          registry-url: https://registry.npmjs.org
+          node-version: '26.12.1'
+      - name: Prepare runtime
+        shell: bash
+        run: |
+          test "$(node --version)" = 'v26.12.1'
+          npm install --global npm@12.2.1 --ignore-scripts --registry=https://registry.npmjs.org
+          test "$(npm --version)" = '12.2.1'
       - run: npm ci --ignore-scripts
       - run: npm run ci:local
-      - run: |
-          if npm view "agentic-security@$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" version; then
-            echo 'Version already published'
-          else
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish missing version with OIDC
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import semver from 'semver';
+
+          const registry = '--registry=https://registry.npmjs.org';
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          if (pkg.name !== 'agentic-security' ||
+              typeof pkg.version !== 'string' || semver.valid(pkg.version) !== pkg.version ||
+              pkg.private ||
+              pkg.repository?.url !== 'git+https://github.com/pooriaarab/agentic-security.git' ||
+              (pkg.publishConfig?.registry !== undefined && pkg.publishConfig.registry !== 'https://registry.npmjs.org')) {
+            throw new Error('Invalid package publication metadata');
+          }
+          const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
+          if (process.versions.node !== '26.12.1' || npmVersion !== '12.2.1') {
+            throw new Error('Release runtime must be Node 26.12.1 and npm 12.2.1');
+          }
+          // Any command error, including 404 or timeout, stops publication.
+          const versions = JSON.parse(execFileSync('npm', [
+            'view', pkg.name, 'versions', '--json', registry,
+          ], { encoding: 'utf8', timeout: 30000 }));
+          if (!Array.isArray(versions) || versions.length === 0 ||
+              !versions.every(version => typeof version === 'string' && semver.valid(version) === version)) {
+            throw new Error('Invalid registry version metadata');
+          }
+          if (versions.includes(pkg.version)) {
+            console.log('Version already published');
+          } else {
+            execFileSync('npm', ['publish', '--access', 'public', registry], { stdio: 'inherit' });
+          }
+          NODE
