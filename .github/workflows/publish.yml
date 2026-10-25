@@ -12,7 +12,6 @@ jobs:
     environment: npm-release
     permissions:
       contents: read
-      id-token: write
     concurrency:
       group: npm-agentic-security-publish
       cancel-in-progress: false
@@ -23,6 +22,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26.12.1'
+          registry-url: https://registry.npmjs.org
       - name: Prepare runtime
         shell: bash
         run: |
@@ -31,7 +31,9 @@ jobs:
           test "$(npm --version)" = '12.2.1'
       - run: npm ci --ignore-scripts
       - run: npm run ci:local
-      - name: Publish missing version with OIDC
+      - name: Publish missing version with npm token
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
