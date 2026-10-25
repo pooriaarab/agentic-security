@@ -1,5 +1,6 @@
 # Security review guide
 Checked on 2026-10-25. Recheck advisories before each fix.
+Quick reference. Full reviews: [dependencies-and-migrations.md](dependencies-and-migrations.md), [ci-and-cloudflare.md](ci-and-cloudflare.md), and [agents-and-mcp.md](agents-and-mcp.md).
 Inventory all workspace manifests, lockfiles, runtime pins, deployment settings, and global agent CLIs.
 Run `npm audit --package-lock-only --json --ignore-scripts` for npm lockfiles; use the matching manager for Bun, pnpm, and Yarn.
 Inspect installed versions and affected advisory ranges. Newer versions alone do not prove a vulnerability.
