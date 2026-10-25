@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import semver from 'semver';
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
 
 type Manager = 'auto'|'npm'|'bun';
 type Severity = 'info'|'low'|'moderate'|'medium'|'high'|'critical';
@@ -17,6 +18,8 @@ const messages = {
   tool: 'Audit tool failed, is unavailable, or exceeded limits.',
   output: 'Audit output is invalid or incomplete.',
   cleanup: 'Temporary audit files could not be removed.',
+  source: 'Lockfile sources require review; only the default npm registry is supported.',
+  format: 'Binary Bun lockfiles are unsupported; use a reviewed text lockfile.',
 } as const;
 
 /** Audit a stable snapshot with a trusted host-installed package manager. */
@@ -64,6 +67,42 @@ export async function audit(root: string, {online = false, manager = 'auto'}: {o
       data = data.subarray(0,size);
       await guard();
     } finally { await handle.close(); }
+    stage = 'source';
+    if (file === 'bun.lockb') { stage = 'format'; throw new Error(); }
+    const parseErrors: ParseError[] = [];
+    const lock: unknown = selected === 'bun' ? parseJsonc(data.toString('utf8'),parseErrors,{allowTrailingComma:true}) : JSON.parse(data.toString('utf8'));
+    if (!object(lock) || parseErrors.length) throw new Error();
+    const official = (value: unknown) => {
+      if (typeof value !== 'string') throw new Error();
+      if (!value) return;
+      const url = new URL(value);
+      if (url.protocol !== 'https:' || url.hostname !== 'registry.npmjs.org' || url.port || url.username || url.password || url.search || url.hash) throw new Error();
+    };
+    if (selected === 'bun') {
+      if (!object(lock.packages)) throw new Error();
+      for (const value of Object.values(lock.packages)) {
+        if (!Array.isArray(value) || typeof value[0] !== 'string') throw new Error();
+        if (value[0].includes('@workspace:')) continue;
+        const version = value[0].slice(value[0].lastIndexOf('@')+1);
+        if (!semver.valid(version)) throw new Error();
+        official(value[1]);
+      }
+    } else {
+      const stack: unknown[] = [];
+      if (object(lock.packages)) stack.push(...Object.values(lock.packages));
+      if (object(lock.dependencies)) stack.push(...Object.values(lock.dependencies));
+      let inspected = 0;
+      while (stack.length) {
+        if (++inspected > 100000) throw new Error();
+        const value = stack.pop(); if (!object(value)) continue;
+        if ('resolved' in value) {
+          const resolved = value.resolved;
+          const localLink = value.link === true && typeof resolved === 'string' && !resolved.startsWith('/') && !resolved.split('/').includes('..') && !resolved.includes(':');
+          if (!localLink) official(resolved);
+        }
+        if (object(value.dependencies)) stack.push(...Object.values(value.dependencies));
+      }
+    }
     temp = await mkdtemp(join(tmpdir(),'agentic-security-audit-'));
     await writeFile(join(temp,file),data,{mode:0o600});
     await writeFile(join(temp,'package.json'),'{"private":true}',{mode:0o600});
@@ -106,7 +145,8 @@ export async function audit(root: string, {online = false, manager = 'auto'}: {o
       if (!object(parsed.metadata) || !object(parsed.metadata.vulnerabilities) || !object(parsed.vulnerabilities)) throw new Error();
       for (const [name,item] of Object.entries(parsed.vulnerabilities)) {
         if (!object(item) || !Array.isArray(item.via)) throw new Error();
-        add(name,item,item.range);
+        const direct = item.via.filter(v => typeof v !== 'string');
+        if (!direct.length) add(name,item,item.range);
         for (const via of item.via) {
           if (typeof via === 'string') continue;
           if (!object(via)) throw new Error();

@@ -38,7 +38,11 @@ Audit requires explicit `online: true` permission. It can disclose dependency na
 Without permission, it returns incomplete JSON. CLI exit codes are 0 for clean, 1 for advisories, and 2 for incomplete results.
 Incomplete results take precedence over advisories.
 Auto selection checks `bun.lock`, then `bun.lockb`, then `npm-shrinkwrap.json`, then `package-lock.json`.
+A detected binary Bun lock returns an unsupported-format report.
 Multiple managers, unsupported lockfiles, final root symlinks, and invalid files cause incomplete results.
+Binary `bun.lockb` files require a reviewed conversion to text before auditing.
+Nondefault registry URLs, tarball sources, and unrecognized sources require review before any manager runs.
+Funding URLs and local workspace links do not select audit registries.
 Use a stable repository snapshot. Identity checks do not provide a filesystem sandbox against concurrent changes.
 Files must be regular files, opened without following symlinks, and at most 8 MiB.
 Audit copies only the selected lockfile into a temporary directory. It generates a minimal private manifest and empty npm config.
