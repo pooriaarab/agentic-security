@@ -145,3 +145,5 @@ export async function scan(root: string, {online = false, registry = 'https://re
   report.updates.sort((a,b) => `${a.file}/${a.section}/${a.name}`.localeCompare(`${b.file}/${b.section}/${b.name}`));
   return report;
 }
+
+export { audit, type AuditReport, type Advisory } from './audit.js';
