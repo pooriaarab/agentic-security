@@ -47,7 +47,7 @@ export async function scan(root: string, {online = false, registry = 'https://re
       await parents(path);
       return data.subarray(0,result.bytesRead).toString('utf8');
     } catch { fail(file, 'File cannot be read within scan limits.'); return undefined; }
-    finally { await handle?.close(); }
+    finally { try { await handle?.close(); } catch { fail(file,'File handle cannot be closed.'); } }
   };
   const manifest = (text: string, file: string) => {
     let p: Record<string, unknown>;

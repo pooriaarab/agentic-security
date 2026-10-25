@@ -30,8 +30,9 @@ test('file read errors retain sibling findings and npm policy uses the last assi
     await mkdir(join(dir,'.github','workflows'),{recursive:true});
     await writeFile(join(dir,'package.json'),'{}');await writeFile(join(dir,'.npmrc'),'ignore-scripts=true\nignore-scripts=false\n');
     await writeFile(join(dir,'.github','workflows','a.yml'),'name: unreadable');await writeFile(join(dir,'.github','workflows','b.yml'),'jobs:\n  x:\n    steps:\n      - uses: actions/checkout@v4');
-    const preload=join(dir,'deny.mjs');await writeFile(preload,`import fs from'node:fs/promises';import{syncBuiltinESMExports}from'node:module';const original=fs.open;fs.open=async function(p,...args){if(String(p).endsWith('/a.yml'))throw Error('secret-canary');return original.call(this,p,...args)};syncBuiltinESMExports();`);
-    const run=spawnSync(process.execPath,['--import',preload,resolve('dist/cli.js'),'scan',dir],{encoding:'utf8'});const p=JSON.parse(run.stdout);
-    assert.equal(p.complete,false);assert.ok(p.findings.some(x=>x.rule==='action-unpinned'));assert.ok(p.findings.some(x=>x.rule==='script-policy'));assert.ok(!run.stdout.includes('secret-canary'));
+    const preload=join(dir,'deny.mjs');await writeFile(preload,`import fs from'node:fs/promises';import{syncBuiltinESMExports}from'node:module';const original=fs.open,originalDir=fs.opendir;fs.opendir=async(...a)=>{const d=await originalDir(...a),all=[];for await(const e of d)all.push(e);return{async*[Symbol.asyncIterator](){yield*all.sort((a,b)=>a.name.localeCompare(b.name))},async close(){}}};fs.open=async function(p,...args){if(String(p).endsWith('/a.yml')){if(process.env.FAIL_CLOSE){const h=await original.call(this,p,...args);const close=h.close.bind(h);h.close=async()=>{await close();throw Error('secret-canary')};return h;}throw Error('secret-canary');}return original.call(this,p,...args)};syncBuiltinESMExports();`);
+    for (const FAIL_CLOSE of ['', '1']) {
+    const run=spawnSync(process.execPath,['--import',preload,resolve('dist/cli.js'),'scan',dir],{encoding:'utf8',env:{...process.env,FAIL_CLOSE}});const p=JSON.parse(run.stdout);
+    assert.equal(p.complete,false);assert.ok(p.findings.some(x=>x.rule==='action-unpinned'));assert.ok(p.findings.some(x=>x.rule==='script-policy'));assert.ok(!run.stdout.includes('secret-canary')); }
   }finally{await rm(dir,{recursive:true,force:true});}
 });
