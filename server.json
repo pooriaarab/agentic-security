@@ -1,1 +1,26 @@
-{"name":"io.github.pooriaarab/agentic-security","description":"Read-only security metadata checks and upgrade plans.","version":"0.2.1","packages":[{"registryType":"npm","identifier":"agentic-security","version":"0.2.1","transport":{"type":"stdio"},"runtimeArguments":[{"type":"named","name":"--package","value":"agentic-security@0.2.1"},{"type":"positional","value":"agentic-security-mcp"}]}]}
+{
+  "name": "io.github.pooriaarab/agentic-security",
+  "description": "Read-only JavaScript security scans and explicit lockfile audits.",
+  "version": "0.2.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "agentic-security",
+      "version": "0.2.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--package",
+          "value": "agentic-security@0.2.2"
+        },
+        {
+          "type": "positional",
+          "value": "agentic-security-mcp"
+        }
+      ]
+    }
+  ]
+}
