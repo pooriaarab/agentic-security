@@ -4,7 +4,7 @@ Checked: 2026-10-25. Recheck vendor advisories before every change.
 This guide is generic. It is not exhaustive.
 
 Use `agentic-security scan` and `agentic-security audit` for the metadata pass.
-See `README.md` for their coverage and limits. Audit requires explicit `--online` permission.
+See [README.md](../README.md) for their coverage and limits. Audit requires explicit `--online` permission.
 
 ## Scope
 
@@ -60,10 +60,10 @@ npm install-scripts ls
 npm install-scripts approve <pkg>
 ```
 
-21. Retain script restrictions where possible. Keep a blanket `ignore-scripts=true` when no dependency needs a lifecycle script. When one does, permit only that package for the manager and version in use: on npm 12, `approve` writes a pinned `allowScripts` entry; on older npm without `allowScripts`, `ignore-scripts` is the only control, so run that install deliberately in a clean environment. A blanket setting hides the skipped-scripts review list on npm 12.
-22. Set `strict-allow-scripts=true` in CI to fail on unapproved scripts. Keep it off on developer laptops.
+21. Retain script restrictions where possible. Keep a blanket `ignore-scripts=true` when no dependency needs a lifecycle script. When scripts are necessary, permit only reviewed packages. On npm 12, `approve` writes a pinned `allowScripts` entry. Older npm lacks this allowlist. Keep install scripts disabled; review and run necessary rebuilds for named packages in isolation. A blanket setting hides the skipped-scripts review list on npm 12.
+22. Consider `strict-allow-scripts=true` to fail on unapproved scripts. Apply the project's reviewed policy in CI and developer environments.
 23. Bun runs lifecycle scripts only for trusted packages. Use the `trustedDependencies` allowlist; setting the field replaces the default list. Source: https://bun.com/docs/pm/lifecycle
-24. Add file:, link:, and git: dependencies to the allowlist. Bun does not trust them implicitly, even when the name matches the default list.
+24. Approve file:, link:, and git: packages only when their reviewed lifecycle scripts must run. Name matches alone do not grant trust.
 
 ## Framework and peer dependencies
 
@@ -88,9 +88,9 @@ npm install-scripts approve <pkg>
 
 ## Scanner coverage vs manual review
 
-37. Automatic scanners find known issues. They cannot find new ones.
+37. Advisory audits report known vulnerabilities. Other scanners can flag suspicious behavior through static analysis or heuristics.
 38. Separate scanner output from manual review in the report.
-39. List what the scanner covers: registry advisories, OSV entries, and lockfile pins.
+39. List each tool's actual coverage. This package separates static metadata checks from package-manager advisory reports.
 40. List what a human must review: new lifecycle scripts, renamed dependencies, fresh point releases, and peer conflicts.
 41. Check the license of any third-party scanner before use. The agentic-security-scanner package uses the PolyForm Internal Use 1.0.0 license, not MIT. Source: https://www.npmjs.com/package/@clear-capabilities/agentic-security-scanner
 42. Do not copy third-party checklists or code into this guide. Write original content.

@@ -4,7 +4,7 @@ Checked: 2026-10-25. Recheck vendor advisories before every change.
 This guide is generic. It is not exhaustive.
 
 Use `agentic-security scan` and `agentic-security audit` for the metadata pass.
-See `README.md` for their coverage and limits. Audit requires explicit `--online` permission.
+See [README.md](../README.md) for their coverage and limits. Audit requires explicit `--online` permission.
 
 ## npm publish path
 
@@ -18,7 +18,7 @@ See `README.md` for their coverage and limits. Audit requires explicit `--online
 5. Check the npm version in CI. npm 12 blocks dependency install scripts by default. Source: https://docs.npmjs.com/cli/v12/commands/npm-install-scripts/
 6. On npm 12, record approvals in the `allowScripts` field with `npm install-scripts approve <pkg>`. Set `strict-allow-scripts=true` in the CI .npmrc so unapproved scripts fail the build instead of warn.
 7. Retain script restrictions. Never blanket-remove `ignore-scripts=true`. Keep it when no dependency needs a lifecycle script.
-8. When a dependency needs a script, permit only that package for the manager and version in use. On npm 12, `approve` writes a pinned entry for the reviewed version. On older npm without `allowScripts`, `ignore-scripts` is the only control; run that install deliberately in a clean environment.
+8. When a dependency needs a script, permit only that package for the manager and version in use. On npm 12, `approve` writes a pinned entry for the reviewed version. Older npm lacks this allowlist. Keep install scripts disabled; review and run necessary rebuilds for named packages in isolation.
 9. Bun blocks lifecycle scripts by default. Use `trustedDependencies`; setting the field replaces the built-in list. Source: https://bun.com/docs/pm/lifecycle
 
 ## Workflow injection
@@ -29,10 +29,10 @@ See `README.md` for their coverage and limits. Audit requires explicit `--online
 13. Search for known bad filenames:
 
 ```bash
-rg -l 'security-audit\.yml|github_actions_security\.yml' .github/workflows/
+rg --files --hidden .github/workflows | rg '(^|/)(security-audit|github_actions_security)\.ya?ml$'
 ```
 
-14. Audit workflow runs after a compromise window. Check for exfiltration.
+14. Treat filenames as indicators, not proof. Inspect workflow contents and runs for credential theft during the suspected compromise window.
 
 ## Action pins and forks
 
@@ -41,7 +41,7 @@ rg -l 'security-audit\.yml|github_actions_security\.yml' .github/workflows/
 17. Keep untrusted PR code away from privileged workflows. `pull_request_target` and `workflow_run` run with access to secrets and may have repository write access; they share the main-branch cache. GitHub treats both as privileged triggers.
 18. For `workflow_run`, treat the triggering run's payload and downloaded artifacts as untrusted. Fork PRs can trigger it with attacker-controlled content. Never execute artifact contents or interpolate them into shell commands.
 19. Give the GITHUB_TOKEN read-only by default. Raise permissions per job.
-20. Do not run self-hosted runners on public repositories. Any user can open a PR and run code on the runner. Be cautious on private and internal repositories too: anyone who can fork and open a PR can compromise the runner and reach its secrets. Ephemeral teardown is not a guarantee; jobs can share a runner, and command-line secrets are visible to other processes.
+20. Do not run self-hosted runners on public repositories. Any user can open a PR and run code on the runner. Treat private pull requests as untrusted unless contributor permissions and approvals establish trust. Restrict secret exposure and isolate each job. Ephemeral teardown is not a guarantee; jobs can share a runner, and command-line secrets are visible to other processes.
 
 ## Worker bindings and secrets
 
@@ -65,7 +65,7 @@ rg -l 'security-audit\.yml|github_actions_security\.yml' .github/workflows/
 32. Check the storage subsystem with `wrangler d1 info <db>`. Databases with `version: production` support Time Travel; legacy alpha databases use snapshot backups only.
 33. R2 buckets are private by default. Public access needs explicit permission. Source: https://developers.cloudflare.com/r2/buckets/public-buckets/
 34. Use the r2.dev subdomain for development only. It is rate-limited.
-35. For restricted buckets, use a custom domain with Cloudflare Access or WAF token authentication.
+35. Review every bucket access path before adding domain authentication. Protecting one hostname does not protect other public routes or S3 credentials.
 36. Disable the r2.dev URL before production.
 
 ## SSRF
@@ -78,7 +78,7 @@ rg -l 'security-audit\.yml|github_actions_security\.yml' .github/workflows/
 
 40. Mask sensitive values in CI logs with `::add-mask::`.
 41. Do not store structured data as a secret. It breaks redaction.
-42. Review workflow logs after runs. Delete logs that leak, then rotate the secret.
+42. Revoke or rotate exposed credentials promptly. Preserve restricted, redacted evidence, then remove leaked public logs.
 
 ## Backups and preview cleanup
 
@@ -91,7 +91,7 @@ rg -l 'security-audit\.yml|github_actions_security\.yml' .github/workflows/
 ## Scanner coverage vs manual review
 
 48. Dependabot alerts cover registry advisories. They now support npm 12, pnpm 11 and 12, and Bun 1.4. Source: https://github.blog/changelog/2026-10-20-dependabot-now-supports-npm-12-pnpm-11-and-12-and-bun-1-4
-49. Scanners do not read workflow logic. Review workflow YAML by hand.
+49. This package checks selected workflow metadata. Other tools can analyze workflow logic; review privileged execution paths separately.
 50. Separate automatic coverage from manual review in the report.
 51. Check the license of third-party actions and scanners before use.
 

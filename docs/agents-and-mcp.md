@@ -4,7 +4,7 @@ Checked: 2026-10-25. Recheck vendor advisories before every change.
 This guide is generic. It is not exhaustive.
 
 Use `agentic-security scan` and `agentic-security audit` for the metadata pass.
-See `README.md` for their coverage and limits. Audit requires explicit `--online` permission.
+See [README.md](../README.md) for their coverage and limits. Audit requires explicit `--online` permission.
 
 ## Threat model
 
@@ -52,7 +52,7 @@ See `README.md` for their coverage and limits. Audit requires explicit `--online
 
 25. Prove the auth stage at the moment of action. A cached "logged in" flag is not proof.
 26. Verify the session token is still valid before a sensitive call.
-27. For browser automation, use the user's real session. Do not reuse stale cookies.
+27. Use a dedicated browser profile for the approved account. Prove each sign-in stage separately; never copy cookie values into logs.
 28. Use OAuth with PKCE for remote MCP servers. The MCP cheat sheet requires authentication, authorization, and transport security (best practice 6).
 
 ## User presence
@@ -63,9 +63,9 @@ See `README.md` for their coverage and limits. Audit requires explicit `--online
 
 ## Approval gates
 
-32. Show the exact tool arguments in the approval prompt. A summary hides the risk.
+32. Show the exact action in approval prompts. Replace secret values with references that bind approval to the resolved action.
 33. The approval must bind to the action that runs. An approval for a different command is not approval.
-34. Log the approved args, the actor, and the outcome. Audit later.
+34. Log redacted arguments, the actor, and the outcome. Keep secret values outside approval records and agent context.
 35. Human-in-the-loop is best practice 4 of the MCP cheat sheet.
 
 ## Sandbox and credential boundaries
@@ -76,7 +76,7 @@ See `README.md` for their coverage and limits. Audit requires explicit `--online
 
 ## Scanner coverage vs manual review
 
-39. Scanners find schema and supply-chain issues. They do not find goal hijack.
+39. Scanner coverage varies. Schema checks and advisory audits do not establish that agent goals remain protected.
 40. mcp-scan checks tool schemas and prompts. It shares tool names and descriptions with the Invariant API by default; `--local-only` runs local checks only and still needs an OPENAI_API_KEY. Run a pinned version on a clean runner. Source: https://invariantlabs-ai.github.io/docs/mcp-scan/
 41. agentic-security-scanner scans projects and MCP setups. Check its license before use. It is PolyForm Internal Use 1.0.0, not MIT. Source: https://www.npmjs.com/package/@clear-capabilities/agentic-security-scanner
 42. Manual review covers: tool descriptions, approval flows, memory handling, and identity boundaries.

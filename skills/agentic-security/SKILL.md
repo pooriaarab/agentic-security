@@ -11,8 +11,8 @@ Read-only metadata scanner, lockfile auditor, and review guides for JavaScript p
 
 1. Run `agentic-security scan <workspace>` first. Preserve the JSON with its commit SHA.
 2. Check `complete` before reporting coverage. List every omitted directory or failed lookup.
-3. For lockfiles, run `agentic-security audit <workspace> --online --manager auto`.
-4. Read the matching guide: `docs/dependencies-and-migrations.md`, `docs/ci-and-cloudflare.md`, `docs/agents-and-mcp.md`.
+3. After registry disclosure is authorized, run `agentic-security audit <workspace> --online --manager auto` for lockfiles.
+4. Read the [dependency](../../docs/dependencies-and-migrations.md), [CI](../../docs/ci-and-cloudflare.md), and [agent](../../docs/agents-and-mcp.md) guides.
 5. Verify each finding against the affected file and vendor advisory.
 
 ## Honest coverage
