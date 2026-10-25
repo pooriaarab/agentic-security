@@ -3,3 +3,7 @@ Read-only CLI, library, and MCP metadata scanner.
 Read README.md for commands and limits.
 Read SKILL.md for the agent workflow.
 Read docs/security-guide.md for manual checks and primary sources.
+Read docs/dependencies-and-migrations.md for dependency audits and upgrades.
+Read docs/ci-and-cloudflare.md for CI/CD and Workers checks.
+Read docs/agents-and-mcp.md for agent and MCP checks.
+Read skills/agentic-security/SKILL.md for the audit workflow.

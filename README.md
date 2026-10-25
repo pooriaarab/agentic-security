@@ -57,6 +57,13 @@ Reports contain `schemaVersion: 1`, `complete`, `manager`, `advisories`, `errors
 Advisories contain validated package names, severity, ranges, and optional GHSA identifiers and URLs.
 Raw tool output, titles, and error details are excluded. Malformed output and tool failures produce fixed error messages.
 
+## Review guides
+- [Dependencies and migrations](docs/dependencies-and-migrations.md)
+- [CI/CD and Cloudflare Workers](docs/ci-and-cloudflare.md)
+- [Agents and MCP](docs/agents-and-mcp.md)
+- [Quick reference](docs/security-guide.md)
+- [Agent skill](skills/agentic-security/SKILL.md)
+
 ## MCP
 The dedicated server command is `npx --package agentic-security@0.2.0 agentic-security-mcp`.
 Tools: `security_scan` accepts `path` and optional `online`; `security_guidance` returns review steps.
