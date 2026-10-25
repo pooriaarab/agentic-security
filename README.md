@@ -1,10 +1,10 @@
 # agentic-security
 Read-only security checks and dependency upgrade plans for JavaScript projects and coding agents.
 ```sh
-npx agentic-security@0.2.0 scan .
-npx agentic-security@0.2.0 scan . --online
-npx agentic-security@0.2.0 scan . --fail-on high
-npx --package agentic-security@0.2.0 agentic-security-mcp
+npx agentic-security@0.2.1 scan .
+npx agentic-security@0.2.1 scan . --online
+npx agentic-security@0.2.1 scan . --fail-on high
+npx --package agentic-security@0.2.1 agentic-security-mcp
 ```
 ```js
 import { scan } from 'agentic-security';
@@ -65,7 +65,7 @@ Raw tool output, titles, and error details are excluded. Malformed output and to
 - [Agent skill](skills/agentic-security/SKILL.md)
 
 ## MCP
-The dedicated server command is `npx --package agentic-security@0.2.0 agentic-security-mcp`.
+The dedicated server command is `npx --package agentic-security@0.2.1 agentic-security-mcp`.
 Tools: `security_scan` accepts `path` and optional `online`; `security_guidance` returns review steps.
 `security_audit` accepts `path`, `online` (default false), and `manager` (`auto`, `npm`, or `bun`).
 Keep the server inside the workspace boundary set by your agent host.
