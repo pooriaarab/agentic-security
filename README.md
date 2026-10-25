@@ -1,73 +1,202 @@
 # agentic-security
-Read-only security checks and dependency upgrade plans for JavaScript projects and coding agents.
+
+[![npm version](https://img.shields.io/npm/v/agentic-security)](https://www.npmjs.com/package/agentic-security)
+[![Downloads per month](https://img.shields.io/npm/dm/agentic-security)](https://www.npmjs.com/package/agentic-security)
+[![MIT license](https://img.shields.io/npm/l/agentic-security)](LICENSE)
+[![TypeScript types](https://img.shields.io/badge/TypeScript-types%20included-3178c6)](https://www.npmjs.com/package/agentic-security)
+
+[Guides](https://github.com/pooriaarab/agentic-security/tree/main/docs) · [API](https://github.com/pooriaarab/agentic-security/blob/main/src/index.ts) · [Comparison](#compare-security-tools) · [Agent skill](https://github.com/pooriaarab/agentic-security/blob/main/skills/agentic-security/SKILL.md) · [MCP setup](https://github.com/pooriaarab/agentic-security/blob/main/.mcp.json) · [llms.txt](https://github.com/pooriaarab/agentic-security/blob/main/llms.txt)
+
+agentic-security is an open-source Node.js security review toolkit for JavaScript projects and coding agents. It checks dependency metadata, agent workflows, and lockfile advisories. It provides a library, command-line interface (CLI), and Model Context Protocol (MCP) server.
+
+## Install
+
 ```sh
-npx agentic-security@0.2.1 scan .
-npx agentic-security@0.2.1 scan . --online
-npx agentic-security@0.2.1 scan . --fail-on high
-npx --package agentic-security@0.2.1 agentic-security-mcp
+npm install agentic-security
 ```
+
+Requires Node.js 22 or later. The package includes TypeScript declarations. It has four runtime dependencies.
+
+## Run your first scan
+
+Run this command from a JavaScript project:
+
+```sh
+npx agentic-security@0.2.2 scan .
+```
+
+The command prints a JSON report. Check `complete: true` before using its findings. Offline scanning needs no credentials and sends no network requests.
+
+To check current registry versions, add `--online`. This sends valid dependency names to the public npm registry. Names can reveal private packages.
+
+```sh
+npx agentic-security@0.2.2 scan . --online --fail-on high
+```
+
+## How it works
+
+```text
+Project files ──read-only scan──▶ Metadata findings
+Lockfile ──explicit online audit──▶ Host npm or Bun ──▶ Advisory report
+                                  ▲
+                         Temporary lockfile copy
+```
+
+## Why agentic-security exists
+
+`npm audit`, Bun audit, and OSV-Scanner focus on known dependency vulnerabilities. Agentic-security adds project metadata and workflow checks. Its audit command uses a trusted host-installed npm or Bun process on a reviewed lockfile copy.
+
+The package reports checks and upgrade plans. It does not apply fixes or claim that a project is secure.
+
+## Compare security tools
+
+Checked on 2026-10-25 against each project's primary documentation.
+
+| | agentic-security | npm audit | Bun audit | OSV-Scanner |
+|---|---|---|---|---|
+| Main scope | JavaScript metadata, workflows, and lockfile advisories | Known advisories for the project dependency tree | Known advisories from `bun.lock` | Known vulnerabilities across supported artifacts and manifests |
+| Advisory source | Host npm or Bun audit command | Configured npm registry | npm advisory endpoint or scoped registry | OSV database |
+| Change behavior | Read-only; plans version updates | `audit` reports; `audit fix` can change packages | `audit` reports; `audit fix` changes the lockfile and install | Scanner reports; remediation depends on workflow |
+| Runtime | Node.js package; npm or Bun manager for lockfile audit | npm CLI | Bun CLI | Standalone CLI or Go library |
+| Project checks beyond advisories | Manifests, lifecycle scripts, publish allowlists, and GitHub Actions | No agent workflow checks | No agent workflow checks | Vulnerability scanning focus |
+
+See the [npm audit docs](https://docs.npmjs.com/cli/v12/commands/npm-audit/), [Bun audit docs](https://bun.com/docs/pm/cli/audit), and [OSV-Scanner docs](https://google.github.io/osv-scanner/).
+
+## Checks and coverage
+
+| Check | Source | Verification |
+|---|---|---|
+| Dependency names, ranges, and lifecycle scripts | Root and nested `package.json` files | Parsed locally; no scripts run |
+| Lockfile and npm script policy hints | Root lockfile and `.npmrc` | Presence and policy text checked |
+| Publish file list and GitHub Actions pins | `package.json` and workflow YAML | File-list presence and full commit SHA pattern checked |
+| Known dependency advisories | Selected npm or text Bun lockfile | Host npm or Bun runs on a temporary copy when online permission is explicit |
+| Current package releases | Public npm registry `latest` tags | Optional online lookup; compares declared range lower bounds |
+
+These are source-level checks. The package has no vendor credential verification. Registry and manager responses are checked for valid report fields. `complete: false` means the result is incomplete and needs review.
+
+## Common use cases
+
+1. **Node.js maintainers.** Check workspace manifests and release allowlists before a package release.
+2. **Coding-agent teams.** Review workflow permissions and action pins before an agent edits CI files.
+3. **CI maintainers.** Produce JSON findings and set `--fail-on` to stop a scan on selected severities.
+4. **Bun projects.** Audit a supported text `bun.lock` through the installed Bun CLI after explicit online permission.
+
+## Features
+
+- Scan package manifests and selected workflow risks. See the [security quick reference](https://github.com/pooriaarab/agentic-security/blob/main/docs/security-guide.md).
+- Report missing lockfiles, npm script-policy hints, and missing publish file lists.
+- Compare range lower bounds with npm `latest` tags. See [dependency and migration reviews](https://github.com/pooriaarab/agentic-security/blob/main/docs/dependencies-and-migrations.md).
+- Audit npm and supported text Bun lockfiles. See the [audit contract](https://github.com/pooriaarab/agentic-security/blob/main/docs/auditing.md).
+- Bound reads, traversal, network lookups, temporary files, and manager output.
+- Return JSON reports with completion status and fixed error messages.
+- Provide static dependency, runtime, and workflow guidance.
+
+## Runtime surfaces
+
+### CLI
+
+```text
+agentic-security --help
+agentic-security scan [root] [--online] [--fail-on high|critical|any]
+agentic-security audit [root] [--online] [--manager auto|npm|bun]
+```
+
+Both commands default to `.`. Scan is offline by default. Audit requires `--online` to invoke a package manager. `--fail-on` affects scan exit status; it does not filter findings. Scan exits with code 2 for incomplete results and code 1 for the selected severity threshold. Audit exits 2 for incomplete results and 1 when advisories exist.
+
+### Library
+
 ```js
-import { scan } from 'agentic-security';
+import { scan, audit, guidance } from 'agentic-security';
+
 const report = await scan('.', { online: false });
 console.log(report.complete, report.findings);
+console.log(guidance);
 ```
 
-- Nested `package.json` files, dependency sources, and lifecycle scripts.
-- Root lockfile presence and npm script policy hints.
-- Publish file allowlists and GitHub action commit pins.
-- Privileged `pull_request_target` workflows that need review.
-- Optional registry lookups with patch, minor, and major upgrade plans.
-Online mode sends valid dependency names to the public npm registry. This can include private package names.
-It compares declared range lower bounds with the registry's current `latest` tag. It does not inspect installed versions.
-A newer release does not prove a vulnerability. Review major migrations and save the report date.
-## Limits
-The scan command does not query vulnerability databases or parse lockfile dependency trees. Neither command scans source secrets or proves application security.
-Use package-manager audits and the [review guide](docs/security-guide.md) for those tasks.
-The scanner never runs project commands, installs packages, or changes files.
-It skips symlinks and generated directories. Scan a stable, trusted snapshot; this process is not a filesystem sandbox. It limits traversal, file sizes, and network requests.
-`complete: false` records unreadable files, invalid manifests, limits, and lookup failures. The CLI then exits with status 2.
-## Lockfile audit
+`scan(root, { online?, registry? })` returns `schemaVersion`, `generatedAt`, `complete`, `manifests`, `findings`, `updates`, and `errors`. `audit(root, { online?, manager? })` returns `schemaVersion`, `complete`, `manager`, `advisories`, `errors`, and an optional `command`. `manager` accepts `auto`, `npm`, or `bun`.
+
+### MCP server
+
+Start the stdio server with:
+
 ```sh
-agentic-security audit . --online --manager auto
+npx --package agentic-security@0.2.2 agentic-security-mcp
 ```
-```js
-import { audit } from 'agentic-security';
-const report = await audit('.', { online: true, manager: 'auto' });
-```
-Audit requires explicit `online: true` permission. It can disclose dependency names to registry services.
-Without permission, it returns incomplete JSON. CLI exit codes are 0 for clean, 1 for advisories, and 2 for incomplete results.
-Incomplete results take precedence over advisories.
-Auto selection checks `bun.lock`, then `bun.lockb`, then `npm-shrinkwrap.json`, then `package-lock.json`.
-A detected binary Bun lock returns an unsupported-format report.
-Multiple managers, unsupported lockfiles, final root symlinks, and invalid files cause incomplete results.
-Binary `bun.lockb` files require a reviewed conversion to text before auditing.
-Nondefault registry URLs, tarball sources, and unrecognized sources require review before any manager runs.
-Funding URLs and bounded local workspace or file links do not select audit registries.
-Absolute local paths, parent traversal, and encoded paths require review. Local targets are never copied into the audit directory.
-Use a stable repository snapshot. Identity checks do not provide a filesystem sandbox against concurrent changes.
-Files must be regular files, opened without following symlinks, and at most 8 MiB.
-Audit copies only the selected lockfile into a temporary directory. It generates a minimal private manifest and empty npm config.
-It never copies repository scripts, credentials, or configuration. It removes temporary files after execution.
-The child environment contains only host process essentials. Package manager settings and authentication variables are excluded.
-Audit runs trusted host-installed `npm` or `bun` without a shell. It never installs, upgrades, or fixes dependencies.
-Each command has a 60-second timeout and an 8 MiB output limit.
-Npm receives `--package-lock-only --ignore-scripts --json --registry=https://registry.npmjs.org` and explicit empty user and global config paths.
-Bun receives `audit --json`. Bun's host manager and global policy remain a trust boundary; review them before granting online permission.
-Reports contain `schemaVersion: 1`, `complete`, `manager`, `advisories`, `errors`, and an optional `command`.
-Advisories contain validated package names, severity, ranges, and optional GHSA identifiers and URLs.
-Raw tool output, titles, and error details are excluded. Malformed output and tool failures produce fixed error messages.
+
+It provides three tools: `security_scan` accepts `path` and `online`; `security_audit` accepts `path`, `online`, and `manager`; `security_guidance` returns static review guidance. Online audit defaults to false. Keep the server inside the workspace boundary set by your agent host.
+
+### Configuration
+
+The package does not load `.env` files or read configuration variables. Pass the root path and options to the library, CLI, or MCP tool. Online mode is an explicit request for registry access.
+
+## Behavior limits
+
+- Scan checks metadata and selected workflow text. It does not query vulnerability databases or inspect full lockfile dependency trees.
+- Online scan compares declared range lower bounds with public npm `latest` tags. A newer version does not prove a vulnerability or a safe upgrade.
+- Audit requires explicit online permission because dependency names may be disclosed to a registry.
+- Audit supports npm lockfiles and text Bun lockfiles. Binary `bun.lockb`, Yarn, pnpm, ambiguous managers, and unrecognized sources return incomplete reports.
+- Audit runs the host-installed npm or Bun command. Review the installed tool before granting permission.
+- The package never runs project scripts, installs dependencies, changes project files, or applies fixes.
+- Scan skips symlinks and `.git`, `node_modules`, `dist`, `build`, `.next`, `.secrets`, `coverage`, and `vendor`.
+- Scan limits traversal to depth 32 and 10,000 entries. It limits dependencies to 5,000 and recorded errors to 100.
+- Scan reads files up to 256 KiB each, with an 8 MiB total. Online lookup allows six requests at once.
+- Each online lookup times out after five seconds. Responses stop at 256 KiB, and redirects fail.
+- Audit rejects symlinks and changed roots. It limits lockfiles and each output stream to 8 MiB.
+- Audit limits each manager run to 60 seconds. It removes the temporary audit directory after execution.
+- Scanning a changing workspace is not a filesystem sandbox. Use a stable, trusted snapshot.
+- Reports do not prove application security. Review findings against source files and primary advisories.
 
 ## Review guides
-- [Dependencies and migrations](docs/dependencies-and-migrations.md)
-- [CI/CD and Cloudflare Workers](docs/ci-and-cloudflare.md)
-- [Agents and MCP](docs/agents-and-mcp.md)
-- [Quick reference](docs/security-guide.md)
-- [Agent skill](skills/agentic-security/SKILL.md)
 
-## MCP
-The dedicated server command is `npx --package agentic-security@0.2.1 agentic-security-mcp`.
-Tools: `security_scan` accepts `path` and optional `online`; `security_guidance` returns review steps.
-`security_audit` accepts `path`, `online` (default false), and `manager` (`auto`, `npm`, or `bun`).
-Keep the server inside the workspace boundary set by your agent host.
-Use Node 22 or later. Run `npm ci --ignore-scripts`, then `npm run ci:local`.
-MIT. Part of the [agentic suite](https://github.com/pooriaarab).
+- [Dependency and migration reviews](https://github.com/pooriaarab/agentic-security/blob/main/docs/dependencies-and-migrations.md)
+- [CI and Cloudflare Worker reviews](https://github.com/pooriaarab/agentic-security/blob/main/docs/ci-and-cloudflare.md)
+- [Agent and MCP reviews](https://github.com/pooriaarab/agentic-security/blob/main/docs/agents-and-mcp.md)
+- [Security quick reference](https://github.com/pooriaarab/agentic-security/blob/main/docs/security-guide.md)
+- [Audit contract and limits](https://github.com/pooriaarab/agentic-security/blob/main/docs/auditing.md)
+- [Agent skill](https://github.com/pooriaarab/agentic-security/blob/main/skills/agentic-security/SKILL.md)
+
+## Status
+
+Version 0.2.2 is a pre-1.0 release. Interfaces can change. Support and bug reports use the [GitHub issue tracker](https://github.com/pooriaarab/agentic-security/issues). Public case studies are not published.
+
+## FAQ
+
+**What does agentic-security check?**
+
+agentic-security checks JavaScript package metadata, selected GitHub workflow risks, and supported lockfile advisories. It also offers optional version lookup against the npm registry.
+
+**Which integrations are verified?**
+
+agentic-security runs local parsing checks and validates npm or Bun audit output. It does not use vendor credentials or claim live service verification.
+
+**Does agentic-security fix vulnerabilities?**
+
+agentic-security reports findings and version plans. It does not change files, install packages, or apply upgrades.
+
+**Does agentic-security provide managed security monitoring?**
+
+agentic-security is a package you run in your environment. It has no managed service or hosted dashboard.
+
+**How is agentic-security different from npm audit?**
+
+agentic-security adds metadata and selected workflow checks around lockfile auditing. npm audit focuses on known vulnerabilities in the dependency tree and can apply changes with `npm audit fix`.
+
+**How is agentic-security different from Bun audit?**
+
+agentic-security checks additional package and workflow metadata. Its lockfile audit delegates to a host-installed Bun process when it selects a supported Bun lockfile.
+
+**How is agentic-security different from OSV-Scanner?**
+
+agentic-security focuses on JavaScript project metadata and npm or Bun lockfiles. OSV-Scanner connects supported project artifacts with vulnerabilities in the OSV database.
+
+**Does online scanning upload source files?**
+
+agentic-security does not upload source files. Online lookups send valid dependency names to a registry and can disclose private package names.
+
+**What does an incomplete report mean?**
+
+agentic-security sets `complete: false` when checks fail or reach a limit. Review the errors and do not treat an incomplete report as a clean result.
+
+## License
+
+MIT. See [LICENSE](https://github.com/pooriaarab/agentic-security/blob/main/LICENSE).
