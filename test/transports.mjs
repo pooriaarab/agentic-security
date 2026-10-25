@@ -20,7 +20,7 @@ test('online scan uses bounded registry requests and marks failed lookups incomp
     assert.equal(report.complete,true);assert.equal(calls.length,1);assert.equal(report.updates[0].kind,'major');
     assert.equal(report.updates[0].decisionRequired,true);assert.ok(!JSON.stringify(report).includes('secret-canary'));
     server.removeAllListeners('request');server.on('request',(_q,r)=>{r.statusCode=503;r.end('secret-canary');});
-    const failure=await scan(dir,{online:true,registry});assert.equal(failure.complete,false);
+    const failure=await scan(dir,{online:true,registry});assert.equal(failure.complete,false);assert.ok(failure.errors.some(x=>x.dependency==='example'));
     assert.ok(!JSON.stringify(failure).includes('secret-canary'));
     console.log(JSON.stringify({artifact:'registry-e2e',offlineNoNetwork:true,majorDecision:true,httpFailureIncomplete:true}));
   } finally { server.closeAllConnections();await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true}); }

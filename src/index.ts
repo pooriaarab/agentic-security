@@ -5,7 +5,7 @@ import semver from 'semver';
 
 export type Finding = { rule: string; severity: 'info'|'low'|'medium'|'high'|'critical'; file: string; message: string };
 export type Update = { file: string; section: string; name: string; current: string; latest: string; kind: 'patch'|'minor'|'major'|'review'; decisionRequired: boolean };
-export type Report = { schemaVersion: 1; generatedAt: string; complete: boolean; manifests: number; findings: Finding[]; updates: Update[]; errors: {file: string; message: string}[] };
+export type Report = { schemaVersion: 1; generatedAt: string; complete: boolean; manifests: number; findings: Finding[]; updates: Update[]; errors: {file: string; message: string; dependency?: string}[] };
 export const guidance = 'Review lifecycle scripts before installation. Pin GitHub actions to full commit SHAs. Use lockfiles and a publish files allowlist. Age alone does not prove vulnerability. Next.js upgrades require routing, rendering, and deployment checks. React upgrades require matching react-dom and peer dependency checks. Node upgrades require engine, native module, and runtime compatibility checks. Online scans can disclose private package names to the registry. No commands or fixes run.';
 const skip = new Set(['.git','node_modules','dist','build','.next','.secrets','coverage','vendor']);
 const sections = ['dependencies','devDependencies','optionalDependencies','peerDependencies'];
@@ -16,7 +16,7 @@ export async function scan(root: string, {online = false, registry = 'https://re
   if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error('Invalid scan directory.');
   const base = await realpath(requested), report: Report = {schemaVersion: 1, generatedAt: new Date().toISOString(), complete: true, manifests: 0, findings: [], updates: [], errors: []};
   const add = (rule: string, severity: Finding['severity'], file: string, message: string) => report.findings.push({rule,severity,file,message});
-  const fail = (file: string, message: string) => { report.complete = false; if (report.errors.length < 100) report.errors.push({file,message}); };
+  const fail = (file: string, message: string, dependency?: string) => { report.complete = false; if (report.errors.length < 100) report.errors.push({file,message,...(dependency ? {dependency} : {})}); };
   const tasks: {file: string; section: string; name: string; current: string}[] = [];
   let entries = 0, bytes = 0, lock = false, npmrc = false, changed = false;
   const identities = new Map<string, string>();
@@ -31,9 +31,10 @@ export async function scan(root: string, {online = false, registry = 'https://re
     for (const part of relative(base,path).split('/').slice(0,-1)) { dir = join(dir,part); await guard(dir); }
   };
   const read = async (path: string, file: string) => {
-    await parents(path);
-    const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
+      await parents(path);
+      handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > 262144 || bytes + stat.size > 8388608) throw new Error();
       await parents(path);
@@ -46,7 +47,7 @@ export async function scan(root: string, {online = false, registry = 'https://re
       await parents(path);
       return data.subarray(0,result.bytesRead).toString('utf8');
     } catch { fail(file, 'File cannot be read within scan limits.'); return undefined; }
-    finally { await handle.close(); }
+    finally { await handle?.close(); }
   };
   const manifest = (text: string, file: string) => {
     let p: Record<string, unknown>;
@@ -90,7 +91,8 @@ export async function scan(root: string, {online = false, registry = 'https://re
         if (entry.name === 'package.json') manifest(text,file);
         else if (entry.name === '.npmrc') {
           npmrc = true;
-          if (!/^\s*ignore-scripts\s*=\s*true\s*(?:[#;].*)?$/mi.test(text) && !/^\s*allowScripts\s*=/mi.test(text)) add('script-policy','low',file,'No ignore-scripts or allowScripts policy found.');
+          const policies = [...text.matchAll(/^\s*ignore-scripts\s*=\s*([^#;\r\n]*)/gmi)];
+          if (policies.at(-1)?.[1].trim().replace(/^['"]|['"]$/g,'').toLowerCase() !== 'true') add('script-policy','low',file,'No effective ignore-scripts policy found.');
         } else {
           if (/\bpull_request_target\b/.test(text)) add('pull-request-target','high',file,'Review privileged pull_request_target permissions and untrusted checkout.');
           const uses = /\buses\s*:\s*["']?([^\s"'#]+)/g;
@@ -123,7 +125,7 @@ export async function scan(root: string, {online = false, registry = 'https://re
             const data: unknown = JSON.parse(text);
             if (!object(data) || typeof data.version !== 'string' || !semver.valid(data.version)) throw new Error();
             return data.version;
-          } catch { fail('.','Registry lookup failed or returned invalid metadata.'); return undefined; }
+          } catch { fail('.','Registry lookup failed or returned invalid metadata.',name); return undefined; }
         })();
         cache.set(name,pending);
       }

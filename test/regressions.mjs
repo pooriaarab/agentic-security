@@ -24,3 +24,14 @@ test('scan refuses a directory replaced by a symlink before traversal',async()=>
     const report=JSON.parse(run.stdout);assert.equal(report.manifests,0);assert.equal(report.complete,false);
   }finally{await rm(dir,{recursive:true,force:true});}
 });
+test('file read errors retain sibling findings and npm policy uses the last assignment',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'security-policy-'));
+  try{
+    await mkdir(join(dir,'.github','workflows'),{recursive:true});
+    await writeFile(join(dir,'package.json'),'{}');await writeFile(join(dir,'.npmrc'),'ignore-scripts=true\nignore-scripts=false\n');
+    await writeFile(join(dir,'.github','workflows','a.yml'),'name: unreadable');await writeFile(join(dir,'.github','workflows','b.yml'),'jobs:\n  x:\n    steps:\n      - uses: actions/checkout@v4');
+    const preload=join(dir,'deny.mjs');await writeFile(preload,`import fs from'node:fs/promises';import{syncBuiltinESMExports}from'node:module';const original=fs.open;fs.open=async function(p,...args){if(String(p).endsWith('/a.yml'))throw Error('secret-canary');return original.call(this,p,...args)};syncBuiltinESMExports();`);
+    const run=spawnSync(process.execPath,['--import',preload,resolve('dist/cli.js'),'scan',dir],{encoding:'utf8'});const p=JSON.parse(run.stdout);
+    assert.equal(p.complete,false);assert.ok(p.findings.some(x=>x.rule==='action-unpinned'));assert.ok(p.findings.some(x=>x.rule==='script-policy'));assert.ok(!run.stdout.includes('secret-canary'));
+  }finally{await rm(dir,{recursive:true,force:true});}
+});
