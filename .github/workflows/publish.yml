@@ -1,0 +1,26 @@
+name: publish
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - run: npm ci --ignore-scripts
+      - run: npm run ci:local
+      - run: |
+          if npm view "agentic-security@$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" version; then
+            echo 'Version already published'
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

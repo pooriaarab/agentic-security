@@ -1,0 +1,5 @@
+# agentic-security
+Read-only CLI, library, and MCP metadata scanner.
+Read README.md for commands and limits.
+Read SKILL.md for the agent workflow.
+Read docs/security-guide.md for manual checks and primary sources.
