@@ -60,7 +60,14 @@ npm install-scripts ls
 npm install-scripts approve <pkg>
 ```
 
-21. Retain script restrictions where possible. Keep a blanket `ignore-scripts=true` when no dependency needs a lifecycle script. When scripts are necessary, permit only reviewed packages. On npm 12, `approve` writes a pinned `allowScripts` entry. Older npm lacks this allowlist. Keep install scripts disabled; review and run necessary rebuilds for named packages in isolation. A blanket setting hides the skipped-scripts review list on npm 12.
+21. Retain script restrictions where possible.
+    Keep `ignore-scripts=true` when no dependency needs a lifecycle script.
+    When scripts are necessary, permit only reviewed packages.
+    On npm 12, `approve` writes a pinned `allowScripts` entry.
+    Older npm lacks this allowlist.
+    Keep install scripts disabled.
+    Review and run necessary rebuilds for named packages in isolation.
+    A blanket setting hides the skipped-scripts review list on npm 12.
 22. Consider `strict-allow-scripts=true` to fail on unapproved scripts. Apply the project's reviewed policy in CI and developer environments.
 23. Bun runs lifecycle scripts only for trusted packages. Use the `trustedDependencies` allowlist; setting the field replaces the default list. Source: https://bun.com/docs/pm/lifecycle
 24. Approve file:, link:, and git: packages only when their reviewed lifecycle scripts must run. Name matches alone do not grant trust.

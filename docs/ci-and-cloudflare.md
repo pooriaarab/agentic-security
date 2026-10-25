@@ -41,7 +41,12 @@ rg --files --hidden .github/workflows | rg '(^|/)(security-audit|github_actions_
 17. Keep untrusted PR code away from privileged workflows. `pull_request_target` and `workflow_run` run with access to secrets and may have repository write access; they share the main-branch cache. GitHub treats both as privileged triggers.
 18. For `workflow_run`, treat the triggering run's payload and downloaded artifacts as untrusted. Fork PRs can trigger it with attacker-controlled content. Never execute artifact contents or interpolate them into shell commands.
 19. Give the GITHUB_TOKEN read-only by default. Raise permissions per job.
-20. Do not run self-hosted runners on public repositories. Any user can open a PR and run code on the runner. Treat private pull requests as untrusted unless contributor permissions and approvals establish trust. Restrict secret exposure and isolate each job. Ephemeral teardown is not a guarantee; jobs can share a runner, and command-line secrets are visible to other processes.
+20. Do not run self-hosted runners on public repositories.
+    Public pull requests can expose runners to untrusted code.
+    Treat private pull requests as untrusted unless contributor permissions and approvals establish trust.
+    Restrict secret exposure and isolate each job.
+    Ephemeral teardown does not guarantee isolation.
+    Other processes can read command-line secrets.
 
 ## Worker bindings and secrets
 
@@ -61,12 +66,22 @@ rg --files --hidden .github/workflows | rg '(^|/)(security-audit|github_actions_
 
 ## D1 and R2 access
 
-31. D1 databases: use Time Travel for recovery. It is always on and restores to any minute within the retention window. Retention is plan-dependent: up to 30 days on the Workers Paid plan, 7 days on the Workers Free plan. Bookmarks older than the window are invalid. Source: https://developers.cloudflare.com/d1/reference/time-travel/
+31. Use D1 Time Travel for recovery.
+    Recovery history is always enabled.
+    Check the plan-specific retention limits: Workers Paid has 30 days; Workers Free has 7 days.
+    Source: https://developers.cloudflare.com/d1/platform/limits/
+    Restore only within the applicable retention window.
+    Recovery procedure: https://developers.cloudflare.com/d1/reference/time-travel/
 32. Check the storage subsystem with `wrangler d1 info <db>`. Databases with `version: production` support Time Travel; legacy alpha databases use snapshot backups only.
 33. R2 buckets are private by default. Public access needs explicit permission. Source: https://developers.cloudflare.com/r2/buckets/public-buckets/
 34. Use the r2.dev subdomain for development only. It is rate-limited.
-35. Review every bucket access path before adding domain authentication. Protecting one hostname does not protect other public routes or S3 credentials.
-36. Disable the r2.dev URL before production.
+35. Test the custom domain and `r2.dev` endpoint separately with an object intended to remain private.
+    Confirm that unauthenticated requests cannot read that object through either endpoint.
+    Custom-domain Access does not protect an enabled `r2.dev` URL.
+36. Disable `r2.dev` for restricted production buckets.
+    Review the S3 API endpoint separately.
+    Check each S3 credential's account, bucket scope, permissions, and expiry.
+    Check presigned URLs and their expiry without logging their secret query values.
 
 ## SSRF
 

@@ -77,7 +77,12 @@ See [README.md](../README.md) for their coverage and limits. Audit requires expl
 ## Scanner coverage vs manual review
 
 39. Scanner coverage varies. Schema checks and advisory audits do not establish that agent goals remain protected.
-40. mcp-scan checks tool schemas and prompts. It shares tool names and descriptions with the Invariant API by default; `--local-only` runs local checks only and still needs an OPENAI_API_KEY. Run a pinned version on a clean runner. Source: https://invariantlabs-ai.github.io/docs/mcp-scan/
+40. mcp-scan checks tool schemas and prompts.
+    By default, it shares tool names and descriptions with the Invariant API.
+    `--local-only` skips that API but still needs an OPENAI_API_KEY.
+    Keep that key outside logs and agent context.
+    Run a pinned version on a clean runner.
+    Source: https://invariantlabs-ai.github.io/docs/mcp-scan/
 41. agentic-security-scanner scans projects and MCP setups. Check its license before use. It is PolyForm Internal Use 1.0.0, not MIT. Source: https://www.npmjs.com/package/@clear-capabilities/agentic-security-scanner
 42. Manual review covers: tool descriptions, approval flows, memory handling, and identity boundaries.
 43. Do not copy third-party scanner code into your own tools. License terms differ.
