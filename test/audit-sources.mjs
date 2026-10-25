@@ -20,6 +20,8 @@ test('audit rejects nondefault sources and binary locks before running a manager
   result=run();assert.equal(JSON.parse(result.stdout).complete,false);await assert.rejects(readFile(marker));
   await writeFile(join(project,'bun.lock'),'// JSONC lock\n{"lockfileVersion":1,"packages":{"example":["example@1.0.0","",{},""]},}');
   result=run();assert.equal(JSON.parse(result.stdout).complete,true);assert.equal(result.status,0);await rm(marker);await rm(join(project,'bun.lock'));
+  await writeFile(join(project,'bun.lock'),'{"lockfileVersion":1,"packages":{"example":["example@file:packages/example",{}]}}');result=run();assert.equal(JSON.parse(result.stdout).complete,true);await rm(marker);
+  await writeFile(join(project,'bun.lock'),'{"lockfileVersion":1,"packages":{"example":["example@file:../outside",{}]}}');result=run();assert.equal(JSON.parse(result.stdout).complete,false);await assert.rejects(readFile(marker));await rm(join(project,'bun.lock'));
   await writeFile(join(project,'bun.lockb'),Buffer.from([0,1,2,3]));result=run();assert.equal(JSON.parse(result.stdout).complete,false);await assert.rejects(readFile(marker));
   console.log(JSON.stringify({artifact:'audit-source-policy',customRegistryRejected:true,officialSourceAccepted:true,fundingMetadataAccepted:true,binaryUnsupported:true}));
  }finally{await rm(root,{recursive:true,force:true});}

@@ -72,6 +72,7 @@ export async function audit(root: string, {online = false, manager = 'auto'}: {o
     const parseErrors: ParseError[] = [];
     const lock: unknown = selected === 'bun' ? parseJsonc(data.toString('utf8'),parseErrors,{allowTrailingComma:true}) : JSON.parse(data.toString('utf8'));
     if (!object(lock) || parseErrors.length) throw new Error();
+    const safeLocal = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 2048 && /^[A-Za-z0-9@_./-]+$/.test(value) && !value.startsWith('/') && !value.split('/').includes('..');
     const official = (value: unknown) => {
       if (typeof value !== 'string') throw new Error();
       if (!value) return;
@@ -82,7 +83,8 @@ export async function audit(root: string, {online = false, manager = 'auto'}: {o
       if (!object(lock.packages)) throw new Error();
       for (const value of Object.values(lock.packages)) {
         if (!Array.isArray(value) || typeof value[0] !== 'string') throw new Error();
-        if (value[0].includes('@workspace:')) continue;
+        const local = value[0].match(/@(?:workspace|file):(.+)$/);
+        if (local) { if (!safeLocal(local[1])) throw new Error(); continue; }
         const version = value[0].slice(value[0].lastIndexOf('@')+1);
         if (!semver.valid(version)) throw new Error();
         official(value[1]);
@@ -97,7 +99,7 @@ export async function audit(root: string, {online = false, manager = 'auto'}: {o
         const value = stack.pop(); if (!object(value)) continue;
         if ('resolved' in value) {
           const resolved = value.resolved;
-          const localLink = value.link === true && typeof resolved === 'string' && !resolved.startsWith('/') && !resolved.split('/').includes('..') && !resolved.includes(':');
+          const localLink = value.link === true && safeLocal(resolved);
           if (!localLink) official(resolved);
         }
         if (object(value.dependencies)) stack.push(...Object.values(value.dependencies));

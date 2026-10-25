@@ -42,7 +42,8 @@ A detected binary Bun lock returns an unsupported-format report.
 Multiple managers, unsupported lockfiles, final root symlinks, and invalid files cause incomplete results.
 Binary `bun.lockb` files require a reviewed conversion to text before auditing.
 Nondefault registry URLs, tarball sources, and unrecognized sources require review before any manager runs.
-Funding URLs and local workspace links do not select audit registries.
+Funding URLs and bounded local workspace or file links do not select audit registries.
+Absolute local paths, parent traversal, and encoded paths require review. Local targets are never copied into the audit directory.
 Use a stable repository snapshot. Identity checks do not provide a filesystem sandbox against concurrent changes.
 Files must be regular files, opened without following symlinks, and at most 8 MiB.
 Audit copies only the selected lockfile into a temporary directory. It generates a minimal private manifest and empty npm config.
