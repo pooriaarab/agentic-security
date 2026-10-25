@@ -22,7 +22,13 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '24'
+          node-version: '26.12.1'
+      - name: Prepare runtime
+        shell: bash
+        run: |
+          test "$(node --version)" = 'v26.12.1'
+          npm install --global npm@12.2.1 --ignore-scripts --registry=https://registry.npmjs.org
+          test "$(npm --version)" = '12.2.1'
       - run: npm ci --ignore-scripts
       - run: npm run ci:local
       - name: Publish missing version with OIDC
@@ -42,8 +48,8 @@ jobs:
             throw new Error('Invalid package publication metadata');
           }
           const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
-          if (!semver.valid(npmVersion) || semver.lt(npmVersion, '11.5.1')) {
-            throw new Error('Trusted publishing requires npm >=11.5.1');
+          if (process.versions.node !== '26.12.1' || npmVersion !== '12.2.1') {
+            throw new Error('Release runtime must be Node 26.12.1 and npm 12.2.1');
           }
           // Any command error, including 404 or timeout, stops publication.
           const versions = JSON.parse(execFileSync('npm', [
