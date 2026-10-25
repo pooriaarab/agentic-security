@@ -77,7 +77,7 @@ These are source-level checks. The package has no vendor credential verification
 ## Common use cases
 
 1. **Node.js maintainers.** Check workspace manifests and release allowlists before a package release.
-2. **Coding-agent teams.** Review workflow permissions and action pins before an agent edits CI files.
+2. **Coding-agent teams.** Scan workflow text for `pull_request_target` and actions without full commit SHA pins before an agent edits CI files.
 3. **CI maintainers.** Produce JSON findings and set `--fail-on` to stop a scan on selected severities.
 4. **Bun projects.** Audit a supported text `bun.lock` through the installed Bun CLI after explicit online permission.
 

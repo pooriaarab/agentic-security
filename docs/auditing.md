@@ -10,7 +10,7 @@ Yarn and pnpm lockfiles are unsupported. A project with both npm and Bun lockfil
 
 ## Source checks
 
-The audit checks that the project root and selected lockfile are regular files with stable identities. It rejects symlinks, changed roots, invalid formats, lockfiles larger than 8 MiB, and more than 100,000 npm dependency entries.
+The audit requires a stable project directory and a regular selected lockfile. It rejects symlinks, changed roots, invalid formats, lockfiles larger than 8 MiB, and more than 100,000 npm dependency entries.
 
 Npm lockfile sources must use `https://registry.npmjs.org`. Nonempty Bun source URLs must use HTTPS and the npm registry. Bounded workspace and file links are allowed. Funding metadata does not affect registry checks. Absolute paths, parent traversal, custom registries, and other source types need review.
 
