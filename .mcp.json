@@ -1,1 +1,12 @@
-{"mcpServers":{"agentic-security":{"command":"npx","args":["--package","agentic-security@0.2.1","agentic-security-mcp"]}}}
+{
+  "mcpServers": {
+    "agentic-security": {
+      "command": "npx",
+      "args": [
+        "--package",
+        "agentic-security@0.2.2",
+        "agentic-security-mcp"
+      ]
+    }
+  }
+}
