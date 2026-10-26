@@ -1,45 +1,22 @@
 # npm publishing
 
-The `publish.yml` workflow publishes from the `release` branch with npm trusted publishing.
-CI and publication use GitHub-hosted runners with Node 26.12.1 and npm 12.2.1.
-These are the latest releases verified on 2026-10-25.
+The `publish.yml` workflow publishes from the `release` branch on GitHub-hosted runners.
+CI and publication use Node 26.12.1 and npm 12.2.1, verified on 2026-10-25.
 The package keeps its consumer support floor at Node `>=22`.
-After setup-node selects Node 26.12.1, both workflows run:
+Failed runtime checks stop the job before dependency installation.
 
-```sh
-test "$(node --version)" = 'v26.12.1'
-npm install --global npm@12.2.1 --ignore-scripts --registry=https://registry.npmjs.org
-test "$(npm --version)" = '12.2.1'
-```
-
-A failed installation or version check stops the job before dependency installation.
-The publication guard checks both exact versions again before any registry lookup.
-Only the publish job receives `id-token: write`. The workflow passes no npm token.
-
-Before enabling this workflow, configure the package's trusted publisher on npm:
-
-- Provider: GitHub Actions
-- Organization or user: `pooriaarab`
-- Repository: `agentic-security`
-- Workflow filename: `publish.yml`
-- Environment name: `npm-release`
-- Allowed actions: direct publication with `npm publish`
-
-The workflow filename is case-sensitive. Enter the filename without its directory.
-The environment must match the job's `environment` exactly.
-The package's `repository.url` must match this GitHub repository.
-A maintainer configures publisher settings and reviews the first real publication separately.
+The `npm-release` environment permits the `release` branch.
+Only the publication step receives `NODE_AUTH_TOKEN` from the repository's `NPM_TOKEN` secret.
+Dependency installation and CI do not receive this token.
+Trusted publishing remains deferred until npm account setup is complete.
+The workflow does not request an OIDC token.
 
 Publication jobs share the fixed `npm-agentic-security-publish` concurrency group.
-A new run cannot cancel an active publication. GitHub keeps only one pending run by default.
-The version guard runs inside this group and skips versions that npm already lists.
-Registry failures, including 404, stop the job. Invalid version metadata also stops the job.
-Only a valid, nonempty version list that omits the local version permits publication.
-A failed publication fails the job. A rerun checks the registry again before publication.
+A new run cannot cancel an active publication. GitHub keeps only one pending run.
+The guard skips versions that npm already lists.
+Registry errors and invalid metadata stop publication. Failed publication fails the job.
+A rerun checks the registry again before publication.
 
-Sources: [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),
-[GitHub concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
-and [GitHub OIDC](https://docs.github.com/en/actions/concepts/security/openid-connect).
-
-Runtime sources: [Node release feed](https://nodejs.org/dist/index.json) and
-[npm latest metadata](https://registry.npmjs.org/npm/latest).
+Sources: [npm authentication](https://docs.npmjs.com/using-private-packages-in-a-ci-cd-workflow/),
+[npm trusted publishing](https://docs.npmjs.com/trusted-publishers/),
+and [GitHub concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
